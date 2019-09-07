@@ -5,21 +5,36 @@ using System.Collections.Generic;
 
 public class BoidsSimulator : MonoBehaviour {
 	
+	// http://www.cs.toronto.edu/~dt/siggraph97-course/cwr87/
+
 	public float2 Size = float2(100,100);
 	public int BoidsCount = 100;
-	public float SenseRadius = 25f;
-	public float SeperationRadius = 5f;
+	
+	public float SenseRadius = 25;
+	public float AvoidRadius = 5;
+	public float SenseAngle = 360 - 70;
 
-	public float SpeedTarget = 50;
+	public float SpeedTarget = 25;
+	public float BoidAccel = 25;
+	public float BoidManeuverBudget = 50;
+	
+	[Range(0, 1)]
+	public float AvoidStrength = 0.8f;
+	[Range(0, 1)]
+	public float AlignStrength = 0.5f;
+	[Range(0, 1)]
+	public float CenterStrength = 0.3f;
 
-	public float WallStrength = 5f;
-	public float ControlSpeedStrength = 1f;
-	public float AlignmentStrength = 1f;
-	public float SeperationStrength = 10f;
-	public float CohesionStrength = 2f;
+	float Drag (float speed) => (BoidAccel / (SpeedTarget * SpeedTarget)) * (speed * speed); // Drag=BoidAccel at speed=SpeedTarget
 
-	public Mesh Mesh;
-	public Material MeshMaterial;
+	//public float AlignmentStrength = 1f;
+	//public float SeperationStrength = 10f;
+	//public float CohesionStrength = 2f;
+
+	public float BoidSize = 1;
+	public Mesh BoidMesh;
+	public Material BoidMaterial;
+	public Gradient BoidColors;
 
 	public Camera Cam;
 	public bool TrackBoid = true;
@@ -29,130 +44,231 @@ public class BoidsSimulator : MonoBehaviour {
 	struct Boid {
 		public float2 pos;
 		public float2 vel;
-
-		public float2 speed;
+		public float2 forward;
+		
+		public float2 avoid;
 		public float2 align;
-		public float2 sep;
-		public float2 coh;
+		public float2 center;
+
+		public Color color;
 	};
 
 	List<Boid> boids = new List<Boid>();
 
+	private void Start () {
+		proceduralMesh = new Mesh();
+		proceduralMesh.MarkDynamic();
+	}
+
 	Boid spawn_boid () {
 		return new Boid {
 			pos = rand.NextFloat2() * Size,
-			vel = rand.NextFloat2Direction() * rand.NextFloat2() * 2 * SpeedTarget,
+			vel = rand.NextFloat2Direction() * rand.NextFloat() * 0.2f * SpeedTarget,
+			forward = float2(0, 1),
+
+			color = BoidColors.Evaluate(rand.NextFloat()),
 		};
 	}
 
-	private void Update () {
+	void SpawnBoids () {
 		if (BoidsCount < boids.Count) {
 			boids.RemoveRange(BoidsCount, boids.Count - BoidsCount);
 		}
 		while (BoidsCount > boids.Count) {
 			boids.Add( spawn_boid() );
+		}	
+	}
+	public void ResetBoids () {
+		if (boids.Count > 0) {
+			boids.RemoveRange(0, boids.Count);
 		}
+	}
+
+	void UpdateBoids () {
+		SpawnBoids();
 
 		for (int i=0; i<boids.Count; ++i) {
 			var boid = boids[i];
 			
-			float2 avg_vel = 0.0f;
-			int avg_vel_count = 0;
+			float speed = length(boid.vel);
 
-			float2 avg_seperation = 0;
-			int avg_seperation_count = 0;
+			if (speed != 0)
+				boid.forward = boid.vel / speed;
 
-			float2 avg_cohesion = 0;
-			int avg_cohesion_count = 0;
+			float2 accel = 0;
 
-			for (int j=0; j<boids.Count; ++j) {
-				if (i == j) continue;
-				var other = boids[j];
-				
-				float2 offs = other.pos - boid.pos;
-				float dist = length(offs);
+			accel +=  boid.forward * BoidAccel; // always accelerate forward
+			accel += -boid.forward * Drag(speed); // drag limits velocity
 
-				if (dist <= SenseRadius) {
-					avg_vel += other.vel;
-					avg_vel_count++;
-				}
-				if (dist <= SeperationRadius) {
-					avg_seperation += offs;
-					avg_seperation_count++;
-				}
-				if (dist <= SenseRadius) {
-					avg_cohesion += offs;
-					avg_cohesion_count++;
-				}
-			}
-
-			if (avg_vel_count > 0)			avg_vel /= avg_vel_count;
-			if (avg_seperation_count > 0)	avg_seperation /= avg_seperation_count;
-			if (avg_cohesion_count > 0)		avg_cohesion /= avg_cohesion_count;
-
-			float2 speed = length(boid.vel);
-			float2 forward = normalizesafe(boid.vel);
-
-			float2 wallVec = clamp(boid.pos, 0, Size) - boid.pos;
-			wallVec *= length(wallVec);
-
-			float2 accel = 0f;
-
-			float2 wall = wallVec * WallStrength;
-			boid.speed = forward * (SpeedTarget - speed) * ControlSpeedStrength;
-			boid.align = (normalizesafe(avg_vel) * SpeedTarget - boid.vel) * AlignmentStrength;
-			boid.sep =  -avg_seperation * SeperationStrength;
-			boid.coh =  avg_cohesion * CohesionStrength;
-
-			accel += wall;
-			accel += boid.speed;
-			accel += boid.align;
-			accel += boid.sep;
-			accel += boid.coh;
+			accel += BoidLogic(i, ref boid, speed);
 
 			boid.vel += accel * Time.deltaTime;
 			boid.pos += boid.vel * Time.deltaTime;
 
+			boid.pos = boid.pos % Size;
+			boid.pos = select(boid.pos, boid.pos + Size, boid.pos < 0);
+
+			InstanceBoid(boid);
+
 			boids[i] = boid;
-
-			var mat = Matrix4x4.TRS(float3(boid.pos, 0), Quaternion.LookRotation(float3(boid.vel, 0), Vector3.up), float3(1));
-
-			Graphics.DrawMesh(Mesh, mat, MeshMaterial, 0);
 		}
+	}
+
+	float2 BoidLogic (int i, ref Boid boid, float speed) {
+		
+		float SenseCosTheta = math.cos(math.radians(SenseAngle));
+
+		float radius = SenseRadius * BoidSize;
+
+		float2 avoidAvg = 0;
+		//float avoidCount = 0;
+
+		float2 alignAvg = 0;
+		float alignCount = 0;
+
+		float2 centerAvg = 0;
+		float centerCount = 0;
+
+		for (int j=0; j<boids.Count; ++j) {
+			if (i == j) continue;
+			var other = boids[j];
+			
+			float2 offs = other.pos - boid.pos;
+			float dist = length(offs);
+			float2 dir = dist != 0 ? offs / dist : 0;
+
+			if (dist > radius || dot(boid.forward, dir) < SenseCosTheta) continue;
+
+			float sensitivity = (1 - dist / radius); // inverse square falloff of sensitivity
+			sensitivity *= sensitivity;
+
+			if (dist <= AvoidRadius * BoidSize) {
+				float d = dist;
+				d /= AvoidRadius * BoidSize; // stong falloff
+
+				float stren = 1f / (d + 0.2f) - 0.83f;
+
+				avoidAvg += -dir * stren;
+			}
+
+			alignAvg += (other.vel - boid.vel) * sensitivity;
+			alignCount += 1;
+			
+			centerAvg += offs * sensitivity;
+			centerCount += 1;
+		}
+
+		//if (avoidCount != 0) avoidAvg /= avoidCount;
+		if (alignCount != 0) alignAvg /= alignCount;
+		if (centerCount != 0) centerAvg /= centerCount;
+
+		float accelBudget = BoidManeuverBudget;
+
+		float2 avoid = avoidAvg * AvoidStrength * BoidManeuverBudget;
+		float2 align = alignAvg * AlignStrength * BoidManeuverBudget;
+		float2 center =  centerAvg * CenterStrength * BoidManeuverBudget;
+
+		float avoidMag = min(length(avoid), accelBudget);
+		accelBudget -= avoidMag;
+
+		float alignMag = min(length(align), accelBudget);
+		accelBudget -= alignMag;
+
+		float centerMag = min(length(center), accelBudget);
+		accelBudget -= centerMag;
+
+		avoid = normalizesafe(avoid) * avoidMag;
+		align = normalizesafe(align) * alignMag;
+		center = normalizesafe(center) * centerMag;
+
+		boid.avoid = avoid;
+		boid.align = align;
+		boid.center = center;
+
+		return avoid + align + center;
+	}
+	
+	Mesh proceduralMesh;
+	List<Vector3> vertices = new List<Vector3>();
+	List<Color> colors = new List<Color>();
+	List<int> triangles = new List<int>();
+	
+	Matrix4x4 Matrix (Boid boid) => Matrix4x4.TRS(float3(boid.pos, 0), Quaternion.LookRotation(float3(boid.forward, 0), float3(0,0,-1)), float3(BoidSize));
+
+	void InstanceBoid (Boid boid) {
+		var mat = Matrix(boid);
+
+		int triOffs = vertices.Count;
+			
+		for (int k=0; k<BoidMesh.vertices.Length; ++k) {
+			vertices.Add(mat.MultiplyPoint(BoidMesh.vertices[k]));
+			colors.Add(boid.color);
+		}
+
+		for (int k=0; k<BoidMesh.triangles.Length; ++k) {
+			triangles.Add(triOffs + BoidMesh.triangles[k]);
+		}
+	}
+
+	private void Update () {
+		proceduralMesh.Clear();
+		vertices.Clear();
+		colors.Clear();
+		triangles.Clear();
+
+		UpdateBoids();
+
+		proceduralMesh.SetVertices(vertices);
+		proceduralMesh.SetColors(colors);
+		proceduralMesh.SetTriangles(triangles, 0);
+
+		Graphics.DrawMesh(proceduralMesh, new Vector3(0,0,0), Quaternion.identity, BoidMaterial, 0);
 
 		if (TrackBoid && boids.Count > 0)
 			Cam.transform.position = float3(boids[0].pos, Cam.transform.position.z);
 	}
 
 	private void OnDrawGizmos () {
-		if (boids.Count <= 0) return;
+		// Area outlines
+		Gizmos.color = Color.grey;
+		Gizmos.DrawWireCube(float3(Size / 2, 0), float3(Size, 1));
 
-		Gizmos.color = Color.red;
-		Gizmos.DrawWireSphere(float3(boids[0].pos, 0), SenseRadius);
-		
-		Gizmos.color = Color.yellow;
-			Gizmos.DrawRay(float3(boids[0].pos, -1), float3(boids[0].speed, 0) / 3);
-		Gizmos.color = Color.green;
-			Gizmos.DrawRay(float3(boids[0].pos, -1), float3(boids[0].align, 0) / 3);
-		Gizmos.color = Color.blue;
-			Gizmos.DrawRay(float3(boids[0].pos, -1), float3(boids[0].sep, 0) / 3);
-		Gizmos.color = Color.black;
-			Gizmos.DrawRay(float3(boids[0].pos, -1), float3(boids[0].coh, 0) / 3);
-		
-		for (int j=0; j<boids.Count; ++j) {
-			if (0 == j) continue;
+		// Boid details
+		if (boids.Count > 0) {
+			Boid boid = boids[0];
 
-			float dist = distance(boids[j].pos, boids[0].pos);
-			if (dist <= SenseRadius) {
-				Gizmos.color = dist <= SeperationRadius ? Color.blue : Color.red;
-				Gizmos.DrawWireSphere(float3(boids[j].pos, 0), 1f);
+			//
+			Gizmos.color = Color.white;
+			Gizmos.matrix = Matrix(boid);
+			Gizmos.DrawWireSphere(float3(0), SenseRadius);
+
+			Gizmos.matrix = Matrix4x4.identity;
+
+			Gizmos.color = Color.red;
+			Gizmos.DrawRay(float3(boid.pos, 0), float3(boid.avoid, 0) * 2);
+			Gizmos.color = Color.yellow;
+			Gizmos.DrawRay(float3(boid.pos, 0), float3(boid.align, 0) * 2);
+			Gizmos.color = Color.cyan;
+			Gizmos.DrawRay(float3(boid.pos, 0), float3(boid.center, 0) * 2);
+
+			if (true) {
+				float SenseCosTheta = math.cos(math.radians(SenseAngle));
+				float radius = SenseRadius * BoidSize;
+
+				for (int j=0; j<boids.Count; ++j) {
+					if (0 == j) continue;
+					var other = boids[j];
+
+					float2 offs = other.pos - boid.pos;
+					float dist = length(offs);
+					float2 dir = dist != 0 ? offs / dist : 0;
+
+					if (dist > SenseRadius * BoidSize || dot(boid.forward, dir) < SenseCosTheta) continue;
+					
+					Gizmos.color = dist < AvoidRadius * BoidSize ? Color.red : Color.green;
+					Gizmos.DrawLine(float3(boid.pos, 0), float3(other.pos, 0));
+				}
 			}
-		}
-
-		for (int i=0; i<boids.Count; ++i) {
-		Gizmos.color = Color.red;
-			Gizmos.DrawRay(float3(boids[i].pos, 0), float3(boids[i].vel, 0) / 5);
-			
 		}
 	}
 }
