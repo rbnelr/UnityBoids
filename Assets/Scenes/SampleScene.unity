@@ -152,6 +152,7 @@ MonoBehaviour:
   Size:
     x: 150
     y: 120
+    z: 150
   BoidsCount: 300
   SenseRadius: 10
   AvoidRadius: 3
@@ -162,8 +163,8 @@ MonoBehaviour:
   AvoidStrength: 0.788
   AlignStrength: 0.571
   CenterStrength: 0.431
-  BoidSize: 1.5
-  BoidMesh: {fileID: -462981019419857548, guid: 5322c7d1f7747dd40a259359ed86a224,
+  BoidSize: 3
+  BoidMesh: {fileID: 1086126036930915424, guid: 99133de9671ee0a4e818bd8a34e37138,
     type: 3}
   BoidMaterial: {fileID: 2100000, guid: e745e769485aeba449d312b2b2bb691f, type: 2}
   BoidColors:
