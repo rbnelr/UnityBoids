@@ -149,54 +149,98 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17f40652142e16244b6322f246ec82b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Size:
-    x: 150
-    y: 120
-  BoidsCount: 300
-  SenseRadius: 10
-  AvoidRadius: 3
-  SenseAngle: 130
-  SpeedTarget: 35
-  BoidAccel: 20
-  BoidManeuverBudget: 40
-  AvoidStrength: 0.788
-  AlignStrength: 0.571
-  CenterStrength: 0.431
-  BoidSize: 1.5
-  BoidMesh: {fileID: -462981019419857548, guid: 5322c7d1f7747dd40a259359ed86a224,
-    type: 3}
-  BoidMaterial: {fileID: 2100000, guid: e745e769485aeba449d312b2b2bb691f, type: 2}
-  BoidColors:
-    serializedVersion: 2
-    key0: {r: 0.33599997, g: 0.69583434, b: 1, a: 1}
-    key1: {r: 0.11512797, g: 0.23412356, b: 0.73800004, a: 1}
-    key2: {r: 0.097637035, g: 0.30563262, b: 0.59900004, a: 0}
-    key3: {r: 0.097637035, g: 0.30563262, b: 0.59900004, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 65535
-    ctime3: 65535
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2
+  WorldRect:
+    x: 230
+    y: 150
+  Kinds:
+  - Count: 300
+    SenseRadius: 10
+    AvoidRadius: 3
+    SenseAngle: 130
+    SpeedTarget: 35
+    BoidAccel: 20
+    BoidManeuverBudget: 40
+    AvoidStrength: 0.788
+    AlignStrength: 0.571
+    CenterStrength: 0.431
+    BoidSize: 1.5
+    BoidMesh: {fileID: -462981019419857548, guid: 5322c7d1f7747dd40a259359ed86a224,
+      type: 3}
+    BoidMaterial: {fileID: 2100000, guid: e745e769485aeba449d312b2b2bb691f, type: 2}
+    BoidColors:
+      serializedVersion: 2
+      key0: {r: 0.33599997, g: 0.69583434, b: 1, a: 1}
+      key1: {r: 0.11512797, g: 0.23412356, b: 0.73800004, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+  - Count: 100
+    SenseRadius: 10
+    AvoidRadius: 3
+    SenseAngle: 130
+    SpeedTarget: 30
+    BoidAccel: 18
+    BoidManeuverBudget: 60
+    AvoidStrength: 0.788
+    AlignStrength: 0.571
+    CenterStrength: 0.431
+    BoidSize: 3
+    BoidMesh: {fileID: -462981019419857548, guid: 5322c7d1f7747dd40a259359ed86a224,
+      type: 3}
+    BoidMaterial: {fileID: 2100000, guid: e745e769485aeba449d312b2b2bb691f, type: 2}
+    BoidColors:
+      serializedVersion: 2
+      key0: {r: 1, g: 0.33725488, b: 0.4021224, a: 1}
+      key1: {r: 0.7372549, g: 0.1137255, b: 0.21791753, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
   Cam: {fileID: 963194227}
-  TrackBoid: 1
+  TrackBoid: 0
 --- !u!4 &800818390
 Transform:
   m_ObjectHideFlags: 0
