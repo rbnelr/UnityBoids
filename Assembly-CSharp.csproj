@@ -56,6 +56,7 @@
   <ItemGroup>
     <Compile Include="Assets\Boid.cs" />
     <Compile Include="Assets\BoidsSimulator.cs" />
+    <Compile Include="Assets\PerfTimer.cs" />
     <None Include="Assets\VertexColorUnlit2.shader" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>D:/coding/Boids/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

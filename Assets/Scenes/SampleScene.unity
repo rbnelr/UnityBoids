@@ -150,17 +150,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   WorldRect:
-    x: 230
-    y: 150
+    x: 150
+    y: 120
   Kinds:
-  - Count: 300
-    SenseRadius: 10
-    AvoidRadius: 3
-    SenseAngle: 130
+  - Name: Boids
+    Count: 300
+    SenseRadius: 7.9
+    AvoidRadius: 0
+    SenseAngle: 140
     SpeedTarget: 35
     BoidAccel: 20
     BoidManeuverBudget: 40
-    AvoidStrength: 0.788
+    AvoidStrength: 3
     AlignStrength: 0.571
     CenterStrength: 0.431
     BoidSize: 1.5
@@ -196,7 +197,8 @@ MonoBehaviour:
       m_Mode: 0
       m_NumColorKeys: 2
       m_NumAlphaKeys: 2
-  - Count: 100
+  - Name: Predators
+    Count: 1
     SenseRadius: 10
     AvoidRadius: 3
     SenseAngle: 130

@@ -37,4 +37,6 @@ public class BoidsSimulator : MonoBehaviour {
 		foreach (var k in Kinds)
 			k.OnDrawGizmos();
 	}
+
+	
 }

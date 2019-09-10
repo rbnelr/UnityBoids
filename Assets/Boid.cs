@@ -20,10 +20,12 @@ public class Boid {
 
 [System.Serializable]
 public class BoidKind {
+	public string Name = "NoName";
+
 	public int Count = 100;
 	
 	public float SenseRadius = 25;
-	public float AvoidRadius = 5;
+	[Range(0, 180)]
 	public float SenseAngle = 360 - 70;
 
 	public float SpeedTarget = 25;
@@ -32,11 +34,8 @@ public class BoidKind {
 	
 	float Drag (float speed) => (BoidAccel / (SpeedTarget * SpeedTarget)) * (speed * speed); // Drag=BoidAccel at speed=SpeedTarget
 	
-	[Range(0, 1)]
 	public float AvoidStrength = 0.8f;
-	[Range(0, 1)]
 	public float AlignStrength = 0.5f;
-	[Range(0, 1)]
 	public float CenterStrength = 0.3f;
 	
 	public float BoidSize = 1;
@@ -46,55 +45,86 @@ public class BoidKind {
 	
 	List<Boid> boids = new List<Boid>();
 
+	double innerloop_time;
+
 	//// Main Logic for each boids movement
 	float2 BoidLogic (int i, ref Boid boid) {
 		
 		float SenseCosTheta = math.cos(math.radians(SenseAngle));
 
 		float radius = SenseRadius * boid.size;
+		float avoidfalloff = 1f / boid.size;
 
 		float2 avoidAvg = 0;
 
 		float2 alignAvg = 0;
-		float alignCount = 0;
+		int alignCount = 0;
 
 		float2 centerAvg = 0;
-		float centerCount = 0;
+		int centerCount = 0;
+
+		var timer = PerfTimer.Start();
 
 		for (int j=0; j<boids.Count; ++j) {
 			if (i == j) continue;
 			var other = boids[j];
 			
+			#if false
 			float2 offs = other.pos - boid.pos;
 			float dist = length(offs);
 			float2 dir = dist != 0 ? offs / dist : 0;
-
+			
 			if (dist > radius || dot(boid.forward, dir) < SenseCosTheta) continue;
+			#else
+			// perf optimization (filter out other boids while avoiding sqrt
+			
+			float2 offs = other.pos - boid.pos;
+
+			float distsq = lengthsq(offs);
+			if (distsq > radius*radius) continue;
+
+			float dist = sqrt(distsq);
+			float2 dir = dist != 0 ? offs / dist : 0;
+
+			if (dot(boid.forward, dir) < SenseCosTheta) continue;
+			#endif
 
 			float sensitivity = (1 - dist / radius); // inverse square falloff of sensitivity
 			sensitivity *= sensitivity;
-
-			if (dist <= AvoidRadius * boid.size) {
-				float d = dist / (AvoidRadius * boid.size); // stong falloff
+			
+			#if false
+			if (dist <= avoidradius) {
+				float d = dist / avoidradius; // strong falloff
 
 				float stren = 1f / (d + 0.2f) - 0.83f;
 
 				avoidAvg += -dir * stren;
 			}
+			#else
+			float d = avoidfalloff * dist + 0.5f;
+			float d2 = d * d;
+			float d4 = d2 * d2;
+
+			float stren = AvoidStrength / d4;
+				
+			avoidAvg += dir * stren;
+			#endif
 
 			alignAvg += (other.vel - boid.vel) * sensitivity;
-			alignCount += 1;
+			alignCount++;
 			
 			centerAvg += offs * sensitivity;
-			centerCount += 1;
+			centerCount++;
 		}
+
+		innerloop_time += timer.End() / boids.Count;
 
 		if (alignCount != 0) alignAvg /= alignCount;
 		if (centerCount != 0) centerAvg /= centerCount;
 
 		float accelBudget = BoidManeuverBudget;
 
-		float2 avoid = avoidAvg * AvoidStrength * BoidManeuverBudget;
+		float2 avoid = -avoidAvg * BoidManeuverBudget;
 		float2 align = alignAvg * AlignStrength * BoidManeuverBudget;
 		float2 center =  centerAvg * CenterStrength * BoidManeuverBudget;
 
@@ -148,6 +178,8 @@ public class BoidKind {
 	void UpdateBoids (ref Unity.Mathematics.Random rand, float2 WorldRect) {
 		SpawnBoids(ref rand, WorldRect);
 
+		innerloop_time = 0;
+
 		for (int i=0; i<boids.Count; ++i) {
 			var boid = boids[i];
 			
@@ -168,7 +200,7 @@ public class BoidKind {
 
 			boid.vel += accel * Time.deltaTime;
 			boid.pos += boid.vel * Time.deltaTime;
-
+			
 			boid.pos = boid.pos % WorldRect;
 			boid.pos = select(boid.pos, boid.pos + WorldRect, boid.pos < 0);
 
@@ -176,6 +208,10 @@ public class BoidKind {
 
 			boids[i] = boid;
 		}
+
+		innerloop_time /= boids.Count;
+
+		Debug.Log(Name +": innerloop_time: "+ innerloop_time * 1000 * 1000 * 1000 +" ns");
 	}
 
 	#region drawing
@@ -227,18 +263,23 @@ public class BoidKind {
 			if (true) {
 				float SenseCosTheta = math.cos(math.radians(SenseAngle));
 				float radius = SenseRadius * boid.size;
+				
+				Gizmos.color = Color.grey;
 
 				for (int j=0; j<boids.Count; ++j) {
 					if (0 == j) continue;
 					var other = boids[j];
 
 					float2 offs = other.pos - boid.pos;
-					float dist = length(offs);
+
+					float distsq = lengthsq(offs);
+					if (distsq > radius*radius) continue;
+
+					float dist = sqrt(distsq);
 					float2 dir = dist != 0 ? offs / dist : 0;
 
-					if (dist > SenseRadius * boid.size || dot(boid.forward, dir) < SenseCosTheta) continue;
+					if (dot(boid.forward, dir) < SenseCosTheta) continue;
 					
-					Gizmos.color = dist < AvoidRadius * boid.size ? Color.red : Color.green;
 					Gizmos.DrawLine(float3(boid.pos, 0), float3(other.pos, 0));
 				}
 			}
